@@ -4,6 +4,7 @@ import bs4 as bs
 import re
 import datetime
 from dateutil.parser import parse
+from client import ChainBreakerScraper
 
 def clean_string(string, no_space = False):   
     """
@@ -273,7 +274,7 @@ def hasCellphoneIcon(driver):
                 return 1
     return 0
 
-def scrap_ad_link(client, driver, link, category, region):
+def scrap_ad_link(client: ChainBreakerScraper, driver, link, category, region):
     
     soup = bs.BeautifulSoup(driver.page_source, "html")
     author = constants.AUTHOR

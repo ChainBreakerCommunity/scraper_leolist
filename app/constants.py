@@ -1,5 +1,3 @@
-import requests
-
 # Sitio, urls, categorías y variables.
 COUNTRY = "canada"
 SITE_NAME = "leolist"
