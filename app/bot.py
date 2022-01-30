@@ -31,6 +31,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import speech_recognition as sr
 import urllib
 import pydub
+import requests
 
 def enterLeolist(driver):
     with driver:
@@ -62,61 +63,98 @@ def clickPhoneButton(driver):
     return solveRecaptcha(driver)
 
 def solveRecaptcha(driver):
-    try:
-        WebDriverWait(driver, 10, ignored_exceptions = NoSuchElementException).until(EC.frame_to_be_available_and_switch_to_it((By.CSS_SELECTOR,"iframe[title='recaptcha challenge']")))
-        recaptcha_audio_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button#recaptcha-audio-button")))
-        recaptcha_audio_button.click()
-        time.sleep(2)
-        play_button = driver.find_element_by_class_name("rc-audiochallenge-play-button").find_element_by_class_name("rc-button-default")
-        play_button.click()
-        src = driver.find_element_by_id("audio-source").get_attribute("src")
-        print("[INFO] Audio src: %s"%src)
-        urllib.request.urlretrieve(src, os.path.normpath(os.getcwd()+"\\sample.mp3"))
-        time.sleep(3)
-        
-        #load downloaded mp3 audio file as .wav
-        try:
-            sound = pydub.AudioSegment.from_mp3(os.path.normpath(os.getcwd()+"\\sample.mp3"))
-            sound.export(os.path.normpath(os.getcwd()+"\\sample.wav"), format="wav")
-            sample_audio = sr.AudioFile(os.path.normpath(os.getcwd()+"\\sample.wav"))
-        except:
-            print("[-] Please run program as administrator or download ffmpeg manually, http://blog.gregzaal.com/how-to-install-ffmpeg-on-windows/")
-            
-        #translate audio to text with google voice recognition
-        r = sr.Recognizer()
-        with sample_audio as source:
-            audio = r.record(source)
-        key = r.recognize_google(audio)
-        print("[INFO] Recaptcha Passcode: %s"%key)
-        
-        #key in results and submit
-        driver.find_element_by_id("audio-response").send_keys(key.lower())
-        verify_button = driver.find_element_by_id("recaptcha-verify-button")
-        verify_button.click()
-        time.sleep(5)
 
-        # check if recaptcha window dissapired.
-        print("Recaptcha error message: ", driver.find_element_by_class_name("rc-audiochallenge-error-message").get_attribute("style"))
-        success = (driver.find_element_by_class_name("rc-audiochallenge-error-message").get_attribute("style") == "display: none;")
-        driver.switch_to.default_content()
-        time.sleep(2)
-        if not success: 
-            print("Recaptcha error")
-        return success
-    except: 
-        problem_recaptcha = False
-        list_a = driver.find_elements_by_class_name("contacts-view-btn")
-        for b in list_a:
-            if b.text.startswith("click to view") or b.text.startswith("SHOW") or b.text.startswith("Loading"):
-                problem_recaptcha = True
-                break
-        driver.switch_to.default_content()
-        if not problem_recaptcha:
-            print("No recaptcha.")
-            return True
-        else:
-            print("Recaptcha couldnt be reached.")
-            return False
+    def googleRecaptcha(driver):
+        try:
+            WebDriverWait(driver, 10, ignored_exceptions = NoSuchElementException).until(EC.frame_to_be_available_and_switch_to_it((By.CSS_SELECTOR,"iframe[title='recaptcha challenge']")))
+            recaptcha_audio_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button#recaptcha-audio-button")))
+            recaptcha_audio_button.click()
+            time.sleep(2)
+            play_button = driver.find_element_by_class_name("rc-audiochallenge-play-button").find_element_by_class_name("rc-button-default")
+            play_button.click()
+            src = driver.find_element_by_id("audio-source").get_attribute("src")
+            print("[INFO] Audio src: %s"%src)
+            urllib.request.urlretrieve(src, os.path.normpath(os.getcwd()+"\\sample.mp3"))
+            time.sleep(3)
+            
+            #load downloaded mp3 audio file as .wav
+            try:
+                sound = pydub.AudioSegment.from_mp3(os.path.normpath(os.getcwd()+"\\sample.mp3"))
+                sound.export(os.path.normpath(os.getcwd()+"\\sample.wav"), format="wav")
+                sample_audio = sr.AudioFile(os.path.normpath(os.getcwd()+"\\sample.wav"))
+            except:
+                print("[-] Please run program as administrator or download ffmpeg manually, http://blog.gregzaal.com/how-to-install-ffmpeg-on-windows/")
+                
+            #translate audio to text with google voice recognition
+            r = sr.Recognizer()
+            with sample_audio as source:
+                audio = r.record(source)
+            key = r.recognize_google(audio)
+            print("[INFO] Recaptcha Passcode: %s"%key)
+            
+            #key in results and submit
+            driver.find_element_by_id("audio-response").send_keys(key.lower())
+            verify_button = driver.find_element_by_id("recaptcha-verify-button")
+            verify_button.click()
+            time.sleep(5)
+
+            # check if recaptcha window dissapired.
+            print("Recaptcha error message: ", driver.find_element_by_class_name("rc-audiochallenge-error-message").get_attribute("style"))
+            success = (driver.find_element_by_class_name("rc-audiochallenge-error-message").get_attribute("style") == "display: none;")
+            driver.switch_to.default_content()
+            time.sleep(2)
+            if not success: 
+                print("Recaptcha error")
+            return success
+        except: 
+            problem_recaptcha = False
+            list_a = driver.find_elements_by_class_name("contacts-view-btn")
+            for b in list_a:
+                if b.text.startswith("click to view") or b.text.startswith("SHOW") or b.text.startswith("Loading"):
+                    problem_recaptcha = True
+                    break
+            driver.switch_to.default_content()
+            if not problem_recaptcha:
+                print("No recaptcha.")
+                return True
+            else:
+                print("Recaptcha couldnt be reached.")
+                return False
+
+    def geetestRecaptcha(driver):
+        with open("./config.json") as json_file: 
+            data = json.load(json_file)
+        recaptcha2_key = data["recaptcha2_key"]
+    
+        # Add these values
+        API_KEY = recaptcha2_key  # Your 2captcha API KEY
+        site_key = ''  # site-key, read the 2captcha docs on how to get this
+        url = 'http://somewebsite.com'  # example url
+        proxy = None #'127.0.0.1:6969'  # example proxy
+
+        #proxy = {'http': 'http://' + proxy, 'https': 'https://' + proxy}
+
+        s = requests.Session()
+
+        # here we post site key to 2captcha to get captcha ID (and we parse it here too)
+        captcha_id = s.post("http://2captcha.com/in.php?key={}&method=userrecaptcha&googlekey={}&pageurl={}".format(API_KEY, site_key, url), proxies=proxy).text.split('|')[1]
+        # then we parse gresponse from 2captcha response
+        recaptcha_answer = s.get("http://2captcha.com/res.php?key={}&action=get&id={}".format(API_KEY, captcha_id), proxies=proxy).text
+        print("solving ref captcha...")
+        while 'CAPCHA_NOT_READY' in recaptcha_answer:
+            time.sleep(5)
+            recaptcha_answer = s.get("http://2captcha.com/res.php?key={}&action=get&id={}".format(API_KEY, captcha_id), proxies=proxy).text
+        recaptcha_answer = recaptcha_answer.split('|')[1]
+
+        # we make the payload for the post data here, use something like mitmproxy or fiddler to see what is needed
+        payload = {
+            'key': 'value',
+            'gresponse': recaptcha_answer  # This is the response from 2captcha, which is needed for the post request to go through.
+        }
+
+        # then send the post request to the url
+        response = s.post(url, payload, proxies=proxy)
+        
     
 def main():
 
@@ -141,12 +179,22 @@ def main():
     driver = uc.Chrome()
     with driver:
         driver.get("https://www.leolist.cc/personals/female-escorts/new-brunswick")
+    logging.warning("Waiting 10 seconds before continue.")
     time.sleep(10)
+    #continue_ = input("Continue: Y/N")
     #agree_button = driver.find_element_by_xpath("/html/body/div[4]/div/div/div/div[2]/a")
-    #agree_button = driver.find_elements_by_class_name("announcementClose")
-    #print(agree_button)
-    #agree_button.click()
-    #time.sleep(2)
+    logging.warning("Searching accept button...")
+    try:
+        agree_button = driver.find_elements_by_class_name("announcementClose")
+        print(agree_button)
+        agree_button[0].click()
+    except: 
+        logging.warning("Selenium didnt pass cloudflare test. Retry process.")
+        driver.quit()
+        time.sleep(10)
+        return main()
+
+    time.sleep(3)
 
     count_announcement = 1
     count_category = 0
@@ -156,7 +204,9 @@ def main():
 
             # Directory list.
             url_category = constants.SITE + category + "/" + region
-            driver.get(url_category)
+            print("URL CATEGORY: ", url_category)
+            with driver: 
+                driver.get(url_category)
             print("Loading list page...")
             time.sleep(3)
 
@@ -190,7 +240,7 @@ def main():
                     page_link = constants.SITE + url
                     info_ad = constants.SITE_NAME + ", category: " + constants.CATEGORIES[count_category] + ", #ad " + str(count_announcement) + ", page_link " + page_link
 
-                    if client.does_ad_exist(utils.get_id_from_url(url), constants.SITE_NAME, constants.COUNTRY):
+                    if client.does_ad_exist(utils.getId(url), constants.SITE_NAME, constants.COUNTRY):
                         logging.warning("Ad already in database. Link: " + url)
                         continue
                     else:
@@ -207,7 +257,7 @@ def main():
                         driver.get(url)
 
                     time.sleep(4)
-                    success_click = clickPhoneButton(driver)
+                    success_click = True#clickPhoneButton(driver)
 
                     if success_click:
                         # Add ad information.

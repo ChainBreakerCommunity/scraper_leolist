@@ -303,9 +303,9 @@ class ChainBreakerScraper(ChainBreakerClient):
         print("Data that will be sent")
         print(data)
         print("")
-        headers = {"x-access-token": self._token}
-        res = requests.post(self._endpoint + "/api/scraper/insert_ad", data = data, headers = headers)
-        return res.status_code
+        #headers = {"x-access-token": self._token}
+        #res = requests.post(self._endpoint + "/api/scraper/insert_ad", data = data, headers = headers)
+        return 200 #res.status_code
 
 class ChainBreakerAdmin(ChainBreakerScraper):
     def __init__(self, endpoint):

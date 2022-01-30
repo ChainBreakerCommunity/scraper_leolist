@@ -1,7 +1,9 @@
 # Sitio, urls, categorías y variables.
+AUTHOR = "chainbreaker"
 COUNTRY = "canada"
 SITE_NAME = "leolist"
-SITE = "https://www.lseolist.cc/personals/"
+SITE = "https://www.leolist.cc/personals/"
+LANGUAGE = "english"
 
 global url_base_list
 url_base_list = [
