@@ -56,7 +56,6 @@ def getCity(soup: bs.BeautifulSoup):
       .find_all("div", {"id":"preview-city"})[0] \
       .find_all("span", {"itemprop":"addressLocality"})[0] \
       .get_text()
-    city = clean_string(city)
     return city
 
 def getRegion(region):
@@ -128,12 +127,23 @@ def getGPS(soup: bs.BeautifulSoup):
         longitude = geo[0].find_all("meta", {"itemprop":"longitude"})[0]["content"]
     return latitude, longitude
 
-def getPostDate(driver):
-    dates = driver.find_elements_by_class_name("ers_tooltip")
-    date = dates[0].get_attribute("data-original-title")
-    date = date[len("Posted on ")]
-    date = parse(date)
-    return date 
+def getPostDate(subtitle: str):
+        
+    if subtitle.startswith("Posted Today, "):
+        split = subtitle.split(" — ")
+        postedToday = split[0][len("Posted Today, "):]
+        return parse(postedToday)
+
+    elif subtitle.startswith("Posted Yesterday, "):
+        split = subtitle.split(" — ")
+        postedYesterday = parse(split[0][len("Posted Yesterday, "):])
+        newdate = postedYesterday.replace(day = postedYesterday.day - 1)
+        return newdate
+
+    elif subtitle.startswith("Posted on "):
+        split = subtitle.split(" — ")
+        postedOn = split[0][len("Posted on "):]
+        return parse(postedOn)
 
 def numViews(subtitle: str) -> str:
     split = subtitle.split(" — ")
@@ -200,13 +210,9 @@ def getReviewsLink(soup: bs.BeautifulSoup):
         return (False, "")
 
 def getExternalWebsite(soup: bs.BeautifulSoup) -> str:
-    href = ""
-    try:
-        div = soup.find_all("div", {"class":"website"})[0]
-        href = div.find("a")["href"]
-        href = "" if href == "#" else href
-    except:
-        href = ""
+    div = soup.find_all("div", {"class":"website"})[0]
+    href = div.find("a")["href"]
+    href = "" if href == "#" else href
     return href
 
 def getImageURLS(driver) -> List[str]:
@@ -243,15 +249,14 @@ def scrap_ad_link(client: ChainBreakerScraper, driver, link:str, category:str, r
 
     # Get phone or whatsapp
     phone = getCellphone(soup)
-    email = getEmail(soup)
-    if phone == None and email == None:
+    if phone == None:
         whatsapp = getWhatsAppContact(soup)
         if whatsapp != None:
             phone = whatsapp
         else:
-            logging.warning("Neither phone nor email were found! We will skip this ad.")
-            return None
-    
+            print("Phone not found! We will skip this ad.")
+            #return None
+
     author = constants.AUTHOR
     language = constants.LANGUAGE
     link = link
@@ -259,11 +264,12 @@ def scrap_ad_link(client: ChainBreakerScraper, driver, link:str, category:str, r
     title = getTitle(soup)
     text = getText(soup)
     category = category
-    first_post_date = getPostDate(driver)
-
+    subtitle = getSubtitle(soup)
+    first_post_date = getPostDate(subtitle)
     date_scrap = getDateScrap()
     website = constants.SITE_NAME
 
+    email = getEmail(soup)
     verified_ad = isVerified(soup)
     prepayment = ""
     promoted_ad = isGold(soup)

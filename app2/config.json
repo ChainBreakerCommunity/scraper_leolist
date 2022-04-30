@@ -1,0 +1,8 @@
+{
+    "endpoint": "http://localhost:8100",
+    "username": "jecepedab@unal.edu.co", 
+    "password": "xxnh12lq",
+    "selenium_endpoint": "http://localhost:4444/wd/hub",
+    "recaptcha_api_key": "0968ef0f2a24ff3d1b8ba332afd980f4", 
+    "leolist_geetest_id": "72bf15796d0b69c43867452fea615052"
+}

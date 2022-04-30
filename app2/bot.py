@@ -7,17 +7,11 @@ import constants
 import sys
 import time
 import undetected_chromedriver.v2 as uc
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from selenium import webdriver
 import copy
 import logging
 from client import ChainBreakerScraper
 import json
-import recaptcha
-import numpy as np
-import warnings
-from pyvirtualdisplay import display
-warnings.filterwarnings("ignore")
+import recapcha
 
 # Configure loggin file.
 logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
@@ -39,36 +33,8 @@ def enterLeolist(driver):
     agree_button = driver.find_element_by_xpath("/html/body/div[4]/div/div/div/div[2]/a")
     agree_button.click()
 
-def getDriver():
-    driver = uc.Chrome()
-    return driver 
-
-    with open("./config.json") as json_file: 
-        data = json.load(json_file)
-    #import os
-    options = webdriver.ChromeOptions()
-    #chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
-    #chrome_options.add_argument("--headless")
-    #chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    #chrome_options.add_experimental_option('useAutomationExtension', False)
-    #chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument('--no-sandbox')
-    options.add_argument('start-maximized')
-    options.add_argument('enable-automation')
-    options.add_argument('--disable-infobars')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--disable-browser-side-navigation')
-    options.add_argument("--remote-debugging-port=9222")
-    # options.add_argument("--headless")
-    options.add_argument('--disable-gpu')
-    options.add_argument("--log-level=3")
-    driver = webdriver.Remote(data["selenium_endpoint"], desired_capabilities = DesiredCapabilities.CHROME)
-    #driver = webdriver.Chrome(executable_path="./chromedriver.exe", chrome_options=chrome_options)
-    return driver
-
 def clickPhoneButton(driver):
     button = None
-
     list_a = driver.find_elements_by_class_name("contacts-view-btn")
     for b in list_a:
         if b.text.startswith("click to view") or b.text.startswith("SHOW"):
@@ -78,10 +44,33 @@ def clickPhoneButton(driver):
                 break
             except: 
                 pass
+  
+def main():
 
-def open_leolist(driver):
-    #with driver:
-    driver.get("https://www.leolist.cc/personals/female-escorts/new-brunswick")
+    with open("./config.json") as json_file: 
+        data = json.load(json_file)
+
+    endpoint = data["endpoint"]
+    user = data["username"]
+    password = data["password"]
+    selenium_endpoint = data["selenium_endpoint"]   
+    recaptcha_api_key = data["recaptcha_api_key"]
+
+    logging.warning("Parameters passed to scraper: " + endpoint + ", " + user + ", " + password)
+    client = ChainBreakerScraper(endpoint)
+    print("Trying to login now")
+    res = client.login(user, password)
+    if type(res) != str:
+        logging.critical("Login was not successful.")
+        sys.exit()
+    else: 
+        logging.warning("Login was successful.")
+
+    # Crear driver.
+    print("Open Chrome")
+    driver = uc.Chrome()
+    with driver:
+        driver.get("https://www.leolist.cc/personals/female-escorts/new-brunswick")
     logging.warning("Waiting 10 seconds before continue.")
     time.sleep(10)
     #continue_ = input("Continue: Y/N")
@@ -97,29 +86,6 @@ def open_leolist(driver):
         time.sleep(10)
         return main()
 
-def main():
-    with open("./config.json") as json_file: 
-        data = json.load(json_file)
-
-    endpoint = data["endpoint"]
-    user = data["username"]
-    password = data["password"]
-    
-    logging.warning("Parameters passed to scraper: " + endpoint + ", " + user + ", " + password)
-    client = ChainBreakerScraper(endpoint)
-    print("Trying to login now")
-    res = client.login(user, password)
-    if type(res) != str:
-        logging.critical("Login was not successful.")
-        sys.exit()
-    else: 
-        logging.warning("Login was successful.")
-
-    # Crear driver.
-    print("Open Chrome")
-    driver = uc.Chrome()#getDriver()
-    open_leolist(driver)
-
     time.sleep(3)
 
     count_announcement = 1
@@ -131,8 +97,8 @@ def main():
             # Directory list.
             url_category = constants.SITE + category + "/" + region
             print("URL CATEGORY: ", url_category)
-            #with driver: 
-            driver.get(url_category)
+            with driver: 
+                driver.get(url_category)
             print("Loading list page...")
             time.sleep(3)
 
@@ -178,31 +144,21 @@ def main():
                     #print("Page: ", page)
                     #print("Scrapping ad # ", str(count_ads + 1))
                     #print("Link: ", ad_link)
-                    try:
-                        driver.get(url)
-                    except: 
-                        driver.close()
-                        driver = driver = uc.Chrome()#getDriver()
-                        open_leolist(driver)
-                        time.sleep(2)
-                        driver.get(url)
 
-                    logging.warning("Ad correctly loaded.")
+                    with driver:
+                        driver.get(url)
 
                     time.sleep(4)
                     #clickPhoneButton(driver)
                     #time.sleep(5)
-                    template_list = np.load('templates.npy')
-                    res = recaptcha.captcha_solver(driver, template_list = template_list)
-                    if res == True:     
-                        # Add ad information.
-                        time.sleep(2)
-                        ad_record = utils.scrap_ad_link(client, driver, url, category, region)
-                        count_announcement += 1
-                    else: 
-                        logging.warning("Skipping this ad because of recaptcha error")
-      
-
+                    data = recapcha.solveGeetestV4(url)
+                    recapcha.submitGeetestV4(driver, data)
+            
+                    # Add ad information.
+                    time.sleep(2)
+                    ad_record = utils.scrap_ad_link(client, driver, url, category, region)
+                    count_announcement += 1
+            
                 # Return the menu.
                 driver.get(menu_url)
                 time.sleep(4)

@@ -1,7 +1,6 @@
 {
-    "endpoint": "http://localhost:8100",
-    "username": "jecepedab@unal.edu.co", 
-    "password": "xxnh12lq",
-    "selenium_endpoint": "http://localhost:4444/wd/hub",
-    "recaptcha2_key": ""
+    "endpoint": "http://localhost:8100/",
+    "username": "chainbreakerinfo@gmail.com", 
+    "password": "chain#6125",
+    "selenium_endpoint": "http://localhost:4444/wd/hub"
 }
