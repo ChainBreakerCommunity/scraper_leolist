@@ -1,6 +1,5 @@
 import os
-from flask import Flask, jsonify, request, make_response
-from flask.helpers import send_from_directory
+from flask import Flask, jsonify, request, make_response, send_from_directory
 from flask_cors import CORS
 import logging
 import json 
@@ -38,6 +37,11 @@ def root():
 def execute_scraper():
     os.system("python ./app/bot.py")
     return jsonify({"message": "bot executed"})
+
+@app.route('/api/get_logs', methods = ["GET"])
+def get_logs():
+    return send_from_directory("app", "app.log")
+
 
 if __name__ == '__main__':
     print("PORT: ", 9100)

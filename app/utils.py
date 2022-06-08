@@ -4,7 +4,7 @@ import bs4 as bs
 import re
 import datetime
 from dateutil.parser import parse
-from client import ChainBreakerScraper
+from chainbreaker_api import ChainBreakerScraper
 import logging
 from typing import List 
 
@@ -276,12 +276,13 @@ def scrap_ad_link(client: ChainBreakerScraper, driver, link:str, category:str, r
 
     comments = []
     latitude, longitude = getGPS(soup)
-    nationality = getEthnicity(soup)
+    ethnicity = getEthnicity(soup)
+    nationality = ""
     age = getAge(soup)
 
     # Upload ad in database.
     status_code = client.insert_ad(author, language, link, id_page, title, text, category, first_post_date, date_scrap, website, phone, country, region, city, place, email, verified_ad, prepayment, promoted_ad, external_website,
-            reviews_website, comments, latitude, longitude, nationality, age) # Eliminar luego
+            reviews_website, comments, latitude, longitude, ethnicity, nationality, age) # Eliminar luego
     print(status_code)
     if status_code != 200: 
         print("Algo salió mal...")

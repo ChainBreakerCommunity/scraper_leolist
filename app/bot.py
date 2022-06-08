@@ -11,7 +11,7 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium import webdriver
 import copy
 import logging
-from client import ChainBreakerScraper
+from chainbreaker_api import ChainBreakerScraper
 import json
 import recaptcha
 import numpy as np
