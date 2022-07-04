@@ -1,32 +1,32 @@
-###################################
-###        LEOLIST MODULE       ###
-###################################
-
-import utils
-import constants
+import bot.scrape
+import bot.constants
 import sys
 import time
-import undetected_chromedriver.v2 as uc
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from selenium import webdriver
 import copy
-import logging
-from chainbreaker_api import ChainBreakerScraper
+
 import json
-import recaptcha
+import bot.recaptcha
 import numpy as np
+
+import undetected_chromedriver.v2 as uc
+from selenium import webdriver
+from chainbreaker_api import ChainBreakerScraper
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.common.by import By
+
 import warnings
-from pyvirtualdisplay import display
 warnings.filterwarnings("ignore")
 
-# Configure loggin file.
-logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
-logging.warning('This will get logged to a file')
+from utils.env import get_config
+config = get_config()
+
+from logger.logger import get_logger
+logger = get_logger(__name__, level = "DEBUG", stream = True)
 
 def enterLeolist(driver):
     with driver:
-        driver.get("https://www.leolist.cc/personals/female-escorts/new-brunswick")
-    print("Current URL: ", driver.current_url)
+        driver.get(bot.constants.BASE_URL)
+    logger.info("Current URL: ", driver.current_url)
     # Enter to leolist.
     close = input("Do you have chrome://welcome/ open? Y/N ")
     if close == "Y":
@@ -69,7 +69,7 @@ def getDriver():
 def clickPhoneButton(driver):
     button = None
 
-    list_a = driver.find_elements_by_class_name("contacts-view-btn")
+    list_a = driver.find_elements(By.CLASS_NAME, "contacts-view-btn")
     for b in list_a:
         if b.text.startswith("click to view") or b.text.startswith("SHOW"):
             try:
@@ -81,42 +81,38 @@ def clickPhoneButton(driver):
 
 def open_leolist(driver):
     #with driver:
-    driver.get("https://www.leolist.cc/personals/female-escorts/new-brunswick")
-    logging.warning("Waiting 10 seconds before continue.")
+    driver.get(bot.constants.BASE_URL)
+    logger.warning("Waiting 10 seconds before continue.")
     time.sleep(10)
     #continue_ = input("Continue: Y/N")
     #agree_button = driver.find_element_by_xpath("/html/body/div[4]/div/div/div/div[2]/a")
-    logging.warning("Searching accept button...")
+    logger.warning("Searching accept button...")
     try:
-        agree_button = driver.find_elements_by_class_name("announcementClose")
-        print(agree_button)
-        agree_button[0].click()
-    except: 
-        logging.warning("Selenium didnt pass cloudflare test. Retry process.")
+        agree_button = driver.find_element(By.CLASS_NAME, "announcementClose")
+        agree_button.click()
+    except Exception as e: 
+        logger.exception(str(e))
         driver.quit()
         time.sleep(10)
-        return main()
+        return execute_scraper()
 
-def main():
-    with open("./config.json") as json_file: 
-        data = json.load(json_file)
-
-    endpoint = data["endpoint"]
-    user = data["username"]
-    password = data["password"]
+def execute_scraper():
+    endpoint = config["ENDPOINT"]
+    user = config["USERNAME"]
+    password = config["PASSWORD"]
     
-    logging.warning("Parameters passed to scraper: " + endpoint + ", " + user + ", " + password)
+    logger.warning("Parameters passed to scraper: " + endpoint + ", " + user + ", " + password)
     client = ChainBreakerScraper(endpoint)
-    print("Trying to login now")
+    logger.info("Trying to login now")
     res = client.login(user, password)
     if type(res) != str:
-        logging.critical("Login was not successful.")
+        logger.critical("Login was not successful.")
         sys.exit()
     else: 
-        logging.warning("Login was successful.")
+        logger.warning("Login was successful.")
 
     # Crear driver.
-    print("Open Chrome")
+    logger.info("Open Chrome")
     driver = uc.Chrome()#getDriver()
     open_leolist(driver)
 
@@ -125,52 +121,52 @@ def main():
     count_announcement = 1
     count_category = 0
 
-    for category in constants.CATEGORIES:
-        for region in constants.regions:
+    for category in bot.constants.CATEGORIES:
+        for region in bot.constants.regions:
 
             # Directory list.
-            url_category = constants.SITE + category + "/" + region
-            print("URL CATEGORY: ", url_category)
+            url_category = bot.constants.SITE + category + "/" + str(region)
+            logger.info("URL CATEGORY: " + url_category)
             #with driver: 
             driver.get(url_category)
-            print("Loading list page...")
+            logger.info("Loading list page...")
             time.sleep(3)
 
             # Page lists.
-            for page in range(1, constants.MAX_PAGES_PER_CATEGORY + 1):
-                logging.warning("# Page: " + str(page))
+            for page in range(1, bot.constants.MAX_PAGES_PER_CATEGORY + 1):
+                logger.warning("# Page: " + str(page))
                 
                 if page > 1:
                     # Change pagination.
-                    divs_pagination = driver.find_elements_by_class_name("pagination-link")
+                    divs_pagination = driver.find_elements(By.CLASS_NAME, "pagination-link")
                     if len(divs_pagination) > 0:
                         for pagination in divs_pagination: 
                             if pagination.get_attribute("aria-label") == "Next page":
                                 pagination.click()
-                                print("Change pagination...")
+                                logger.info("Change pagination...")
                                 time.sleep(4)
                     else: 
                         continue
                     
                 # Get list url.
                 menu_url = driver.current_url
-                list_urls = utils.get_ads_links(driver)
+                list_urls = bot.scrape.get_ads_links(driver)
 
                 for url in list_urls:
 
                     if client.get_status() != 200:
-                        logging.error("Endpoint is offline. Service stopped.", exc_info = True)
+                        logger.error("Endpoint is offline. Service stopped.", exc_info = True)
                         driver.quit()
                         sys.exit()
 
-                    page_link = constants.SITE + url
-                    info_ad = constants.SITE_NAME + ", category: " + constants.CATEGORIES[count_category] + ", #ad " + str(count_announcement) + ", page_link " + page_link
+                    page_link = bot.constants.SITE + url
+                    info_ad = bot.constants.SITE_NAME + ", category: " + bot.constants.CATEGORIES[count_category] + ", #ad " + str(count_announcement) + ", page_link " + page_link
 
-                    if client.does_ad_exist(utils.getId(url), constants.SITE_NAME, constants.COUNTRY):
-                        logging.warning("Ad already in database. Link: " + url)
+                    if client.does_ad_exist(bot.scrape.getId(url), bot.constants.SITE_NAME, bot.constants.COUNTRY):
+                        logger.warning("Ad already in database. Link: " + url)
                         continue
                     else:
-                        logging.warning("New Ad. " + info_ad)
+                        logger.warning("New Ad. " + info_ad)
 
                     #print("Website: ", constants.site_name)
                     #print("Region: ", region)
@@ -187,25 +183,22 @@ def main():
                         time.sleep(2)
                         driver.get(url)
 
-                    logging.warning("Ad correctly loaded.")
+                    logger.warning("Ad correctly loaded.")
 
                     time.sleep(4)
                     #clickPhoneButton(driver)
                     #time.sleep(5)
-                    template_list = np.load('templates.npy')
-                    res = recaptcha.captcha_solver(driver, template_list = template_list)
+                    template_list = np.load('./bot/templates.npy')
+                    res = bot.recaptcha.captcha_solver(driver, template_list = template_list)
                     if res == True:     
                         # Add ad information.
                         time.sleep(2)
-                        ad_record = utils.scrap_ad_link(client, driver, url, category, region)
+                        ad_record = bot.scrape.scrap_ad_link(client, driver, url, category, region)
                         count_announcement += 1
                     else: 
-                        logging.warning("Skipping this ad because of recaptcha error")
+                        logger.warning("Skipping this ad because of recaptcha error")
       
 
                 # Return the menu.
                 driver.get(menu_url)
                 time.sleep(4)
-         
-if __name__ == "__main__":
-    main()

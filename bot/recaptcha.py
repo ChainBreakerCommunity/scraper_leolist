@@ -4,18 +4,17 @@ Leolist Captcha solving, web-scraping script
 @author: Elsa Riachi, s5941336
 @date: April 08 2022
 """
-
-import pandas as pd
-from bs4 import BeautifulSoup
-import re
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 import time
 import cv2 as cv
 import numpy as np
 from scipy import ndimage, signal
-import undetected_chromedriver.v2 as uc
 import copy
+
+from logger.logger import get_logger
+logger = get_logger(__name__, level = "DEBUG", stream = True)
+
 
 """ Captcha solving functions """
 def normalize(x):
@@ -37,7 +36,6 @@ def find_peak(scores):
         peak_idx = np.argmax(s)
         return peak_loc_list
 
-
 def get_edges(img):
     #img = cv.GaussianBlur(img, ksize=(5, 5), sigmaX=1, sigmaY=1)
 
@@ -52,11 +50,9 @@ def get_edges(img):
 
     return edges
 
-
 def similarity(template, segment):
     dot = np.sum(segment * template)
     return dot
-
 
 def crop_and_slide(img, src_loc, template):
     dot_values = []
@@ -77,7 +73,6 @@ def crop_and_slide(img, src_loc, template):
     peak_loc = find_peak(np.array(dot_values))
     dst_loc = loc_values[peak_loc]
     return dst_loc
-
 
 def get_offset(og_img, shifted_img, template_list):
     img = cv.cvtColor(og_img, cv.COLOR_BGR2HSV)[:, :, 2]
@@ -106,7 +101,6 @@ def get_offset(og_img, shifted_img, template_list):
 
     return offset, dst_loc, og_img
 
-
 def get_template_match(edges, template_list):
 
     activation_map = signal.oaconvolve(np.tile(edges[None, :], (template_list.shape[0], 1, 1)),
@@ -121,7 +115,7 @@ def get_template_match(edges, template_list):
 
 def clickPhoneButton(driver):
     button = None
-    list_a = driver.find_elements_by_class_name("contacts-view-btn")
+    list_a = driver.find_elements(By.CLASS_NAME, "contacts-view-btn")
     for b in list_a:
         if b.text.startswith("click to view") or b.text.startswith("SHOW"):
             try:
@@ -191,9 +185,8 @@ def captcha_solver(driver, template_list):
             # check for geetest window again, supposed to fail if captcha solved
             slider_window = driver.find_element(by=By.CLASS_NAME, value="geetest_window")
             if slider_window.size['height'] == 0:
-                print('Success!')
+                logger.info('Success!')
                 return True
         except Exception:
-            print("Success!")
+            logger.info("Success!")
             return True
-

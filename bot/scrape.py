@@ -1,12 +1,15 @@
-import constants
-import time
 import bs4 as bs
 import re
 import datetime
 from dateutil.parser import parse
 from chainbreaker_api import ChainBreakerScraper
-import logging
 from typing import List 
+from selenium.webdriver.common.by import By
+import bot.constants
+
+from logger.logger import get_logger
+logger = get_logger(__name__, level = "DEBUG", stream = True)
+
 
 def clean_string(string, no_space = False):   
     """
@@ -21,12 +24,12 @@ def clean_string(string, no_space = False):
     return string
 
 def get_ads_links(driver):
-    divs = driver.find_elements_by_class_name("group")
+    divs = driver.find_elements(By.CLASS_NAME, "group")
     post_links = list()
     
     for post in divs: 
         
-        a_tag_post = post.find_elements_by_tag_name("a")
+        a_tag_post = post.find_elements(By.TAG_NAME, "a")
         
         for element in a_tag_post: 
             if a_tag_post.index(element) == 0:
@@ -129,10 +132,10 @@ def getGPS(soup: bs.BeautifulSoup):
     return latitude, longitude
 
 def getPostDate(driver):
-    dates = driver.find_elements_by_class_name("ers_tooltip")
+    dates = driver.find_elements(By.CLASS_NAME, "ers_tooltip")
     date = dates[0].get_attribute("data-original-title")
     date = date[len("Posted on ")]
-    date = parse(date)
+    date = parse(date).strftime('%Y-%m-%d')
     return date 
 
 def numViews(subtitle: str) -> str:
@@ -199,7 +202,7 @@ def getReviewsLink(soup: bs.BeautifulSoup):
     except:
         return (False, "")
 
-def getExternalWebsite(soup: bs.BeautifulSoup) -> str:
+def getExternalWebsite(soup: bs.BeautifulSoup) -> str or None:
     href = ""
     try:
         div = soup.find_all("div", {"class":"website"})[0]
@@ -214,14 +217,14 @@ def getImageURLS(driver) -> List[str]:
     
     try:
         verified_images = driver.find_element_by_class_name("account-photos--verified")
-        for image in verified_images.find_elements_by_tag_name("img"): 
+        for image in verified_images.find_elements(By.TAG_NAME, "img"): 
             image_list.append((image.get_attribute("src"), 1))
     except: 
         pass
     
     try:
         not_verified_images = driver.find_element_by_class_name("account-photos--images")
-        for image in not_verified_images.find_elements_by_tag_name("img"): 
+        for image in not_verified_images.find_elements(By.TAG_NAME, "img"): 
             image_list.append((image.get_attribute("src"), 0))
     except: 
         pass
@@ -229,7 +232,7 @@ def getImageURLS(driver) -> List[str]:
 
 def hasCellphoneIcon(driver) -> int:
     address = driver.find_element_by_class_name("address")
-    explore = address.find_elements_by_tag_name("i")
+    explore = address.find_elements(By.TAG_NAME, "i")
     for res in explore:
         if res.get_attribute("class") == "icon-phone-o mr":
             if res.value_of_css_property("display") == "block":
@@ -244,16 +247,17 @@ def scrap_ad_link(client: ChainBreakerScraper, driver, link:str, category:str, r
     # Get phone or whatsapp
     phone = getCellphone(soup)
     email = getEmail(soup)
-    if phone == None and email == None:
+    external_website = getExternalWebsite(soup)
+    if phone == "" and email == "" and external_website == "":
         whatsapp = getWhatsAppContact(soup)
         if whatsapp != None:
             phone = whatsapp
         else:
-            logging.warning("Neither phone nor email were found! We will skip this ad.")
+            logger.warning("Neither phone, email nor external website were found! We will skip this ad.")
             return None
     
-    author = constants.AUTHOR
-    language = constants.LANGUAGE
+    author = bot.constants.AUTHOR
+    language = bot.constants.LANGUAGE
     link = link
     id_page = getId(link)
     title = getTitle(soup)
@@ -262,12 +266,11 @@ def scrap_ad_link(client: ChainBreakerScraper, driver, link:str, category:str, r
     first_post_date = getPostDate(driver)
 
     date_scrap = getDateScrap()
-    website = constants.SITE_NAME
+    website = bot.constants.SITE_NAME
 
     verified_ad = isVerified(soup)
     prepayment = ""
     promoted_ad = isGold(soup)
-    external_website = getExternalWebsite(soup)
     reviews_website = getReviewsLink(soup)[1]
     country = "canada" 
     region = region
@@ -281,10 +284,15 @@ def scrap_ad_link(client: ChainBreakerScraper, driver, link:str, category:str, r
     age = getAge(soup)
 
     # Upload ad in database.
-    status_code = client.insert_ad(author, language, link, id_page, title, text, category, first_post_date, date_scrap, website, phone, country, region, city, place, email, verified_ad, prepayment, promoted_ad, external_website,
+    data, res = client.insert_ad(author, language, link, id_page, title, text, category, first_post_date, date_scrap, website, phone, country, region, city, place, email, verified_ad, prepayment, promoted_ad, external_website,
             reviews_website, comments, latitude, longitude, ethnicity, nationality, age) # Eliminar luego
-    print(status_code)
-    if status_code != 200: 
-        print("Algo salió mal...")
+    
+    # Log results.
+    logger.info("Data sent to server: ")
+    logger.info(data)
+    logger.info(res.status_code)
+    if res.status_code != 200: 
+        logger.error("Algo salió mal..." + str(res.text))
+
     else: 
-        print("Éxito!")
+        logger.info("Éxito!")

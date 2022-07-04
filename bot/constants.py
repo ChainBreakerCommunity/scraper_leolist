@@ -5,6 +5,8 @@ SITE_NAME = "leolist"
 SITE = "https://www.leolist.cc/personals/"
 LANGUAGE = "english"
 
+BASE_URL = "https://www.leolist.cc/personals/female-escorts/new-brunswick"
+
 global url_base_list
 url_base_list = [
     "https://www.leolist.cc/personals/female-escorts",
