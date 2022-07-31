@@ -1,5 +1,8 @@
 # Ignore directories
 /chromedriver.exe
+ss_120.png
+ss.png
+ss1.png 
 
 # Ignore executable
 app/chromedriver.exe

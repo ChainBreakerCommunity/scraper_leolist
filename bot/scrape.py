@@ -5,11 +5,14 @@ from dateutil.parser import parse
 from chainbreaker_api import ChainBreakerScraper
 from typing import List 
 from selenium.webdriver.common.by import By
+from undetected_chromedriver import Chrome
 import bot.constants
 
 from logger.logger import get_logger
 logger = get_logger(__name__, level = "DEBUG", stream = True)
 
+import ipfshttpclient
+ipfs_client = ipfshttpclient.connect('/dns/ipfs.infura.io/tcp/5001/https')
 
 def clean_string(string, no_space = False):   
     """
@@ -178,20 +181,6 @@ def getWhatsAppContact(soup: bs.BeautifulSoup) -> str:
 def getDateScrap() -> datetime.datetime:
     return datetime.datetime.now()
 
-def isVerified(soup: bs.BeautifulSoup) -> str:
-    try:
-        text = soup.find_all("div", {"class":"alert-verified"})[0].get_text()
-        return "1"
-    except:
-        return "0"
-
-def isGold(soup: bs.BeautifulSoup) -> str:
-    try:
-        soup.find_all("div", {"class":"gold-label"})[0].get_text()
-        return "1"
-    except:
-        return "0"
-
 def getReviewsLink(soup: bs.BeautifulSoup):
     try:
         link = soup.find_all("a", {"id":"lyla-button"})[0]["href"]
@@ -239,6 +228,12 @@ def hasCellphoneIcon(driver) -> int:
                 return 1
     return 0
 
+def getScreenshot(driver: Chrome):
+    driver.execute_script("window.scrollTo(0,0)")
+    driver.save_screenshot("ss1.png")
+    res = ipfs_client.add("ss1.png")
+    return res["Hash"]
+
 def scrap_ad_link(client: ChainBreakerScraper, driver, link:str, category:str, region:str):
     
     # Get soup object.
@@ -268,9 +263,6 @@ def scrap_ad_link(client: ChainBreakerScraper, driver, link:str, category:str, r
     date_scrap = getDateScrap()
     website = bot.constants.SITE_NAME
 
-    verified_ad = isVerified(soup)
-    prepayment = ""
-    promoted_ad = isGold(soup)
     reviews_website = getReviewsLink(soup)[1]
     country = "canada" 
     region = region
@@ -282,10 +274,11 @@ def scrap_ad_link(client: ChainBreakerScraper, driver, link:str, category:str, r
     ethnicity = getEthnicity(soup)
     nationality = ""
     age = getAge(soup)
+    screenshot = getScreenshot(driver)
 
     # Upload ad in database.
-    data, res = client.insert_ad(author, language, link, id_page, title, text, category, first_post_date, date_scrap, website, phone, country, region, city, place, email, verified_ad, prepayment, promoted_ad, external_website,
-            reviews_website, comments, latitude, longitude, ethnicity, nationality, age) # Eliminar luego
+    data, res = client.insert_ad(author, language, link, id_page, title, text, category, first_post_date, date_scrap, website, phone, country, region, city, place, email, external_website,
+            reviews_website, comments, latitude, longitude, ethnicity, nationality, age, screenshot) # Eliminar luego
     
     # Log results.
     logger.info("Data sent to server: ")
