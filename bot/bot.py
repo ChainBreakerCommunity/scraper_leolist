@@ -128,7 +128,7 @@ def execute_scraper():
         for region in bot.constants.regions:
 
             current_time = datetime.datetime.now()
-            delta = current_time - current_time
+            delta = current_time - start_time
             sec = delta.total_seconds()
             mins = sec / 60
             if mins >= 60:
