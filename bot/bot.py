@@ -3,7 +3,7 @@ import bot.constants
 import sys
 import time
 import copy
-
+import datetime
 import json
 import bot.recaptcha
 import numpy as np
@@ -97,6 +97,9 @@ def open_leolist(driver):
         return execute_scraper()
 
 def execute_scraper():
+
+    start_time = datetime.datetime.now()
+
     endpoint = config["ENDPOINT"]
     user = config["USERNAME"]
     password = config["PASSWORD"]
@@ -123,6 +126,13 @@ def execute_scraper():
 
     for category in bot.constants.CATEGORIES:
         for region in bot.constants.regions:
+
+            current_time = datetime.datetime.now()
+            delta = current_time - current_time
+            sec = delta.total_seconds()
+            mins = sec / 60
+            if mins >= 60:
+                sys.exit()
 
             # Directory list.
             url_category = bot.constants.SITE + category + "/" + str(region)
