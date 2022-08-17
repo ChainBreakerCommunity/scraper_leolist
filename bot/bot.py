@@ -127,13 +127,6 @@ def execute_scraper():
     for category in bot.constants.CATEGORIES:
         for region in bot.constants.regions:
 
-            current_time = datetime.datetime.now()
-            delta = current_time - start_time
-            sec = delta.total_seconds()
-            mins = sec / 60
-            if mins >= 60:
-                sys.exit()
-
             # Directory list.
             url_category = bot.constants.SITE + category + "/" + str(region)
             logger.info("URL CATEGORY: " + url_category)
@@ -163,6 +156,14 @@ def execute_scraper():
                 list_urls = bot.scrape.get_ads_links(driver)
 
                 for url in list_urls:
+
+                    # Check time limit.
+                    current_time = datetime.datetime.now()
+                    delta = current_time - start_time
+                    sec = delta.total_seconds()
+                    mins = sec / 60
+                    if mins >= 60:
+                        sys.exit()
 
                     if client.get_status() != 200:
                         logger.error("Endpoint is offline. Service stopped.", exc_info = True)
