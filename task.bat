@@ -1,0 +1,1 @@
+C:\Users\Administrator\Desktop\Scrapers\scraper_leolist\env\Scripts\activate && python C:\Users\Administrator\Desktop\Scrapers\scraper_leolist\app.py

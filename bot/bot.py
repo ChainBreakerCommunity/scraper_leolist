@@ -103,6 +103,7 @@ def execute_scraper():
     endpoint = config["ENDPOINT"]
     user = config["USERNAME"]
     password = config["PASSWORD"]
+    max_time = config["MAX_TIME"]
     
     logger.warning("Parameters passed to scraper: " + endpoint + ", " + user + ", " + password)
     client = ChainBreakerScraper(endpoint)
@@ -162,7 +163,7 @@ def execute_scraper():
                     delta = current_time - start_time
                     sec = delta.total_seconds()
                     mins = sec / 60
-                    if mins >= 60:
+                    if mins >= max_time:
                         sys.exit()
 
                     if client.get_status() != 200:
