@@ -84,6 +84,7 @@ def open_leolist(driver):
     driver.get(bot.constants.BASE_URL)
     logger.warning("Waiting 10 seconds before continue.")
     time.sleep(10)
+    return
     #continue_ = input("Continue: Y/N")
     #agree_button = driver.find_element_by_xpath("/html/body/div[4]/div/div/div/div[2]/a")
     logger.warning("Searching accept button...")
@@ -103,7 +104,7 @@ def execute_scraper():
     endpoint = config["ENDPOINT"]
     user = config["USERNAME"]
     password = config["PASSWORD"]
-    max_time = config["MAX_TIME"]
+    max_time = int(config["MAX_TIME"])
     
     logger.warning("Parameters passed to scraper: " + endpoint + ", " + user + ", " + password)
     client = ChainBreakerScraper(endpoint)
